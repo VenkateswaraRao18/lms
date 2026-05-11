@@ -98,7 +98,8 @@ This repo includes a minimal [`render.yaml`](../render.yaml). You can use **Newâ
 ## 8. If the build fails
 
 - Confirm **Docker** is selected (not Node).
-- Read the **Build** log: Prisma + `npm run build` run **inside** the Dockerfile; errors are usually missing env at **build** time only if you referenced them in `next.config` during build (this project does not require DB at build time).
+- **`prisma generate` during `npm ci`:** the Dockerfile copies `prisma/` before `npm ci` so `postinstall` can find `prisma/schema.prisma`. If you forked an old Dockerfile, compare with the repoâ€™s current `Dockerfile`.
+- Read the **Build** log: Prisma + `npm run build` run **inside** the Dockerfile; this app does **not** need `DATABASE_URL` at image build time.
 - Out of memory: bump the instance type in Render.
 
 For Render account/billing questions, use [Render docs](https://render.com/docs) or their support.
