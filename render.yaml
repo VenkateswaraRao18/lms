@@ -1,0 +1,8 @@
+# Render Blueprint — optional. See docs/RENDER.md for the full walkthrough.
+# New → Blueprint → connect repo; or create a Docker Web Service manually (often simpler).
+
+services:
+  - type: web
+    name: studio-lms
+    runtime: docker
+    healthCheckPath: /

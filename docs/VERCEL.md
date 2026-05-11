@@ -2,6 +2,8 @@
 
 Use this when **students** use the hosted app; keep **Ollama / AI authoring** on your machine if you prefer.
 
+If Vercel auth or cookies keep misbehaving, use **Render** (Docker) instead — see **[RENDER.md](./RENDER.md)** (same Neon DB, existing `Dockerfile`). Railway is described in [RENDER-AND-RAILWAY.md](./RENDER-AND-RAILWAY.md).
+
 ## 1. Repo on GitHub
 
 Push this project to a GitHub repository Vercel can import.
