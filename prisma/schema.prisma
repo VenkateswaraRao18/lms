@@ -1,0 +1,282 @@
+generator client {
+  provider      = "prisma-client-js"
+  /// Vercel serverless uses Linux (rhel-openssl-3.0.x); `native` keeps local dev fast.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  /// Use the **direct** (non-pooler) Postgres URL for migrations — required by Neon/Railway poolers. Locally, set equal to `DATABASE_URL`.
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+enum LessonKind {
+  VIDEO
+  NOTES
+  QUIZ
+  ASSIGNMENT
+}
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+}
+
+enum SubmissionStatus {
+  PENDING
+  REVIEWED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(STUDENT)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  enrollments               Enrollment[]
+  quizAttempts              QuizAttempt[]
+  submissions               Submission[]
+  lessonProgress            LessonProgress[]
+  writtenExamSubmissions    WrittenExamSubmission[]
+  writtenExamCompletions    WrittenExamCompletion[]
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  slug        String   @unique
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  modules      Module[]
+  enrollments  Enrollment[]
+  writtenExams WrittenExam[]
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  description String?  @db.Text
+  orderIndex  Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+  quiz    Quiz?
+
+  @@index([courseId])
+  @@unique([courseId, orderIndex])
+}
+
+model Lesson {
+  id         String     @id @default(cuid())
+  moduleId   String
+  title      String
+  kind       LessonKind
+  content    String?    @db.Text
+  videoUrl   String?
+  orderIndex Int
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  module      Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  assignment  Assignment?
+  attachments LessonAttachment[]
+  progress    LessonProgress[]
+
+  @@index([moduleId])
+  @@unique([moduleId, orderIndex])
+}
+
+model LessonAttachment {
+  id        String   @id @default(cuid())
+  lessonId  String
+  fileName  String
+  filePath  String
+  mimeType  String?
+  sizeBytes Int?
+  createdAt DateTime @default(now())
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId])
+}
+
+model Quiz {
+  id             String   @id @default(cuid())
+  moduleId       String   @unique
+  title          String
+  passingPercent Int      @default(70)
+  maxAttempts    Int      @default(3)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  module    Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+}
+
+model QuizQuestion {
+  id           String       @id @default(cuid())
+  quizId       String
+  type         QuestionType
+  prompt       String       @db.Text
+  optionsJson  String       @db.Text
+  correctIndex Int?
+  correctBool  Boolean?
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId])
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  quizId      String
+  userId      String
+  score       Float
+  passed      Boolean
+  answersJson String   @db.Text
+  attemptNum  Int
+  completedAt DateTime @default(now())
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, userId])
+}
+
+model Assignment {
+  id          String    @id @default(cuid())
+  lessonId    String    @unique
+  title       String
+  description String    @db.Text
+  dueAt       DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lesson       Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  userId       String
+  textAnswer   String?          @db.Text
+  filePath     String?
+  fileName     String?
+  mimeType     String?
+  status       SubmissionStatus @default(PENDING)
+  feedback     String?          @db.Text
+  submittedAt  DateTime         @default(now())
+  reviewedAt   DateTime?
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, userId])
+  @@index([userId])
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  userId     String
+  courseId   String
+  enrolledAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([courseId])
+}
+
+model LessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  completedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([lessonId])
+}
+
+/// Instructor-led written exam (typed answers), graded 0–10. Submission row is deleted after the learner acknowledges to save DB space.
+model WrittenExam {
+  id           String   @id @default(cuid())
+  courseId     String
+  title        String
+  instructions String   @db.Text
+  published    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  course       Course                    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions    WrittenExamQuestion[]
+  submissions  WrittenExamSubmission[]
+  completions  WrittenExamCompletion[]
+
+  @@index([courseId])
+}
+
+model WrittenExamQuestion {
+  id         String @id @default(cuid())
+  examId     String
+  orderIndex Int
+  prompt     String @db.Text
+
+  exam WrittenExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@index([examId])
+  @@unique([examId, orderIndex])
+}
+
+model WrittenExamSubmission {
+  id          String    @id @default(cuid())
+  examId      String
+  userId      String
+  answersJson String    @db.Text
+  submittedAt DateTime  @default(now())
+  /// 0–10 when graded; null while pending
+  score       Int?
+  feedback    String?   @db.Text
+  gradedAt    DateTime?
+
+  exam WrittenExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, userId])
+  @@index([examId])
+  @@index([userId])
+}
+
+/// Minimal row kept after a learner acknowledges results — prevents retakes without storing answers.
+model WrittenExamCompletion {
+  id             String   @id @default(cuid())
+  examId         String
+  userId         String
+  acknowledgedAt DateTime @default(now())
+
+  exam WrittenExam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, userId])
+  @@index([userId])
+}
