@@ -1,12 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { loginAction, type LoginActionState } from "@/actions/login-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const initialState: LoginActionState = {};
+const initialState = {} as LoginActionState;
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -20,9 +21,15 @@ function SubmitButton() {
 export function LoginForm() {
   const [state, formAction] = useFormState(loginAction, initialState);
 
+  useEffect(() => {
+    if (state && "ok" in state && state.ok) {
+      window.location.assign("/");
+    }
+  }, [state]);
+
   return (
     <form action={formAction} className="space-y-4">
-      {state?.error ? (
+      {state && "error" in state && state.error ? (
         <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
           {state.error}
         </p>

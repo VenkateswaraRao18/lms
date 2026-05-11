@@ -1,10 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { CredentialsSignin } from "next-auth";
 import { signIn } from "@/auth";
 
-export type LoginActionState = { error?: string };
+/** `ok: true` → client must `window.location` navigate so Set-Cookie from this action is applied before the next document load (Vercel + Server Actions + `redirect()` can drop the session). */
+export type LoginActionState = { error?: string } | { ok: true };
 
 function authRedirectUrl(url: string): URL {
   try {
@@ -45,5 +45,5 @@ export async function loginAction(
     return { error: "Invalid email or password." };
   }
 
-  redirect("/");
+  return { ok: true };
 }

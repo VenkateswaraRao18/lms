@@ -8,6 +8,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   basePath: "/api/auth",
   trustHost: true,
   secret: process.env.AUTH_SECRET,
+  /** Browsers require `Secure` cookies on https:// — inferring from the internal request URL can miss `https` on some Vercel invocations. */
+  useSecureCookies: process.env.VERCEL === "1",
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: "/login" },
   providers: [
