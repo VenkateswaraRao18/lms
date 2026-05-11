@@ -1,39 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useFormState, useFormStatus } from "react-dom";
+import { loginAction, type LoginActionState } from "@/actions/login-action";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+
+const initialState: LoginActionState = {};
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="mt-2 h-11 w-full text-[15px] shadow-md shadow-primary/10" disabled={pending}>
+      {pending ? "Signing in…" : "Sign in"}
+    </Button>
+  );
+}
 
 export function LoginForm() {
-  const [pending, setPending] = useState(false);
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") ?? "").trim();
-    const password = String(fd.get("password") ?? "");
-    setPending(true);
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
-    setPending(false);
-    if (res?.error) {
-      toast.error("Invalid email or password.");
-      return;
-    }
-    // Full navigation so the Set-Cookie from /api/auth is applied before RSC runs
-    // (router.push + refresh can race on Vercel and leave you on /login with a valid session).
-    const next = res?.url && res.url !== window.location.href ? res.url : "/";
-    window.location.assign(next);
-  }
+  const [state, formAction] = useFormState(loginAction, initialState);
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form action={formAction} className="space-y-4">
+      {state?.error ? (
+        <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+          {state.error}
+        </p>
+      ) : null}
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -56,9 +49,7 @@ export function LoginForm() {
           className="h-11 border-border/80 bg-background/90 text-[15px] shadow-sm"
         />
       </div>
-      <Button type="submit" className="mt-2 h-11 w-full text-[15px] shadow-md shadow-primary/10" disabled={pending}>
-        {pending ? "Signing in…" : "Sign in"}
-      </Button>
+      <SubmitButton />
     </form>
   );
 }
