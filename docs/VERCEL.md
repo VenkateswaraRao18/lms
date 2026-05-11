@@ -23,8 +23,12 @@ Add these in **Project → Settings → Environment Variables** (check **Product
 | `DATABASE_URL` | Neon **pooled** connection string (`-pooler` host), `?sslmode=require` |
 | `DIRECT_DATABASE_URL` | Neon **direct** (non-pooler) host — required for `prisma migrate` |
 | `AUTH_SECRET` | Long random string (`openssl rand -base64 32`) — **different** from local if you want |
-| `NEXTAUTH_URL` | Your live app URL, e.g. `https://your-project.vercel.app` (or custom domain) |
+| `NEXTAUTH_URL` | **Origin only** — `https://your-project.vercel.app` (no `/login`, no path after the host). Same rule for `AUTH_URL` if you set it. |
 | `NEXT_PUBLIC_APP_URL` | Same as `NEXTAUTH_URL` |
+
+**Preview deployments** (`*-git-*-*.vercel.app`): either add the same variables for the **Preview** environment in Vercel, or test login on your **Production** URL only. If `NEXTAUTH_URL` points at Production but you open a Preview URL, cookies and redirects can misbehave.
+
+Wrong example (breaks `/api/auth/*` with 400): `NEXTAUTH_URL=https://....vercel.app/login`
 
 Optional (only if you use AI on this deployment):
 

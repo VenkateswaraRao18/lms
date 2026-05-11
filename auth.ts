@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  /** Always `/api/auth` for the App Router — stops bad `AUTH_URL`/`NEXTAUTH_URL` path segments from breaking auth on Vercel. */
+  basePath: "/api/auth",
   trustHost: true,
   secret: process.env.AUTH_SECRET,
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },

@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export function LoginForm() {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -28,8 +26,10 @@ export function LoginForm() {
       toast.error("Invalid email or password.");
       return;
     }
-    router.refresh();
-    router.push("/");
+    // Full navigation so the Set-Cookie from /api/auth is applied before RSC runs
+    // (router.push + refresh can race on Vercel and leave you on /login with a valid session).
+    const next = res?.url && res.url !== window.location.href ? res.url : "/";
+    window.location.assign(next);
   }
 
   return (
